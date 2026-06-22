@@ -1,0 +1,116 @@
+:root {
+  /* ── Typography ─────────────────────────────────────── */
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --heading: var(--sans);
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ── Light palette ──────────────────────────────────── */
+  --text: #5b6573;          /* secondary text */
+  --text-h: #121822;        /* headings / primary text */
+  --bg: #ffffff;            /* surfaces / cards */
+  --bg-page: #eef1f5;       /* page behind the app shell */
+  --border: #e4e7ec;
+  --code-bg: #f3f5f8;
+  --accent: #3a63e0;
+  --accent-bg: rgba(58, 99, 224, 0.1);
+  --accent-border: rgba(58, 99, 224, 0.45);
+  --shadow:
+    rgba(16, 24, 40, 0.08) 0 8px 20px -6px,
+    rgba(16, 24, 40, 0.05) 0 2px 6px -2px;
+
+  font: 16px/1.5 var(--sans);
+  letter-spacing: 0.1px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg-page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #99a2b1;
+    --text-h: #eef1f6;
+    --bg: #181b22;
+    --bg-page: #0d0e12;
+    --border: #2a2e38;
+    --code-bg: #1f232c;
+    --accent: #809cff;
+    --accent-bg: rgba(128, 156, 255, 0.16);
+    --accent-border: rgba(128, 156, 255, 0.5);
+    --shadow:
+      rgba(0, 0, 0, 0.5) 0 8px 20px -6px,
+      rgba(0, 0, 0, 0.3) 0 2px 6px -2px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--bg-page);
+}
+
+/* App shell: a clean centred surface floating on the page background */
+#root {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background: var(--bg);
+  border-inline: 1px solid var(--border);
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 650;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 26px;
+  letter-spacing: -0.4px;
+  margin: 0;
+}
+
+h2 {
+  font-size: 19px;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
+  margin: 0 0 8px;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  line-height: 1.35;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+::selection {
+  background: var(--accent-bg);
+}

@@ -1,0 +1,118 @@
+.mq-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  padding: 2px 6px 2px 4px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.mq-badge.mq-compact {
+  padding: 2px 5px;
+  font-size: 11px;
+}
+
+.mq-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.mq-label {
+  text-transform: uppercase;
+  font-size: 9px;
+}
+
+/* Own palette — not Chess.com assets */
+
+.mq-brilliant {
+  color: #0e7490;
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.32);
+}
+.mq-brilliant .mq-dot { background: #06b6d4; color: #fff; }
+
+.mq-great {
+  color: #5b21b6;
+  background: rgba(124, 58, 237, 0.11);
+  border-color: rgba(124, 58, 237, 0.28);
+}
+.mq-great .mq-dot { background: #7c3aed; color: #fff; }
+
+.mq-best {
+  color: #166534;
+  background: rgba(22, 101, 52, 0.12);
+  border-color: rgba(22, 101, 52, 0.25);
+}
+.mq-best .mq-dot { background: #22c55e; color: #fff; }
+
+.mq-excellent {
+  color: #3f6212;
+  background: rgba(101, 163, 13, 0.12);
+  border-color: rgba(101, 163, 13, 0.25);
+}
+.mq-excellent .mq-dot { background: #84cc16; color: #1a2e05; }
+
+.mq-good {
+  color: #115e59;
+  background: rgba(20, 184, 166, 0.12);
+  border-color: rgba(20, 184, 166, 0.25);
+}
+.mq-good .mq-dot { background: #2dd4bf; color: #042f2e; }
+
+.mq-book {
+  color: #78350f;
+  background: rgba(180, 83, 9, 0.1);
+  border-color: rgba(180, 83, 9, 0.22);
+}
+.mq-book .mq-dot { background: #d97706; color: #fff; }
+
+.mq-inaccuracy {
+  color: #854d0e;
+  background: rgba(234, 179, 8, 0.12);
+  border-color: rgba(234, 179, 8, 0.28);
+}
+.mq-inaccuracy .mq-dot { background: #eab308; color: #422006; }
+
+.mq-mistake {
+  color: #9a3412;
+  background: rgba(249, 115, 22, 0.12);
+  border-color: rgba(249, 115, 22, 0.28);
+}
+.mq-mistake .mq-dot { background: #f97316; color: #fff; }
+
+.mq-miss {
+  color: #9f1239;
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.28);
+}
+.mq-miss .mq-dot { background: #fb7185; color: #fff; }
+
+.mq-blunder {
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.28);
+}
+.mq-blunder .mq-dot { background: #ef4444; color: #fff; }
+
+.move-btn.active .mq-badge {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.move-btn.active .mq-dot {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--accent);
+}

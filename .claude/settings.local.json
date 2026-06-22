@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npx create-vite@latest . --template react-ts)",
+      "Read(//private/tmp/**)",
+      "Bash(npx create-vite@latest chess_eval_tmp --template react-ts)",
+      "Bash(cp *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(npx tsc *)",
+      "Bash(pkill -f \"vite.*5173\")",
+      "Bash(npx playwright *)",
+      "Bash(npm init *)",
+      "Bash(curl -s \"https://api.chess.com/pub/player/animegurl42069/games/archives\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'Archives: {len\\(d[\\\\\"archives\\\\\"]\\)}'\\); print\\('Most recent:', d['archives'][-1]\\)\")",
+      "Bash(node chess_verify.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(grep -o 'width[^,;]{0,60}' /Users/jinhanwu/chess_eval/node_modules/react-chessboard/dist/index.js)",
+      "Bash(grep -o '\"width\"[^,;]{0,80}' /Users/jinhanwu/chess_eval/node_modules/react-chessboard/dist/index.js)",
+      "Bash(grep -o 'boardStyle[^,;\\(]{0,200}' /Users/jinhanwu/chess_eval/node_modules/react-chessboard/dist/index.esm.js)",
+      "Bash(grep -o '\"boardStyle\"\\\\|boardStyle[^,;\\(]{0,150}' /Users/jinhanwu/chess_eval/node_modules/react-chessboard/dist/index.js)",
+      "Bash(curl -s -o /dev/null -w \" wasm:%{http_code}\" \"http://localhost:5173/stockfish-18-lite-single.wasm\")",
+      "Bash(curl -sI \"http://localhost:5173/stockfish-18-lite-single.wasm\")",
+      "Bash(lsof -ti:5173)",
+      "Bash(node *)",
+      "Bash(playwright --version)",
+      "Bash(npx tsx *)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/lichess-org/chess-openings/master/a.tsv\")",
+      "Bash(xargs cat)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(echo \"tsc-exit:$?\")",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}
