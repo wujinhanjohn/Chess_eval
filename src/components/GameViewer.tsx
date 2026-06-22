@@ -140,6 +140,7 @@ interface ExploreState {
   moves: string[]   // UCI moves played so far (full history, may exceed offset)
   fens: string[]    // [baseFen, after move 1, …]
   sans: string[]    // SAN labels
+  evals: (EvalResult | null)[]  // aligned with fens; eval of each position (null until computed)
   offset: number    // current position in variation
 }
 
@@ -303,6 +304,24 @@ export function GameViewer({ game, onBack }: Props) {
     return (explore.fens[explore.offset].split(' ')[1] ?? 'w') as 'w' | 'b'
   }, [explore])
 
+  // ── Explore move classifications ──────────────────────────────────
+  // Grade each played variation move (Best, Excellent, … Blunder, Miss) by
+  // reusing the mainline classifier on its before/after eval pair. Brilliant/
+  // Great need the multi-PV second pass and so don't appear here. A move stays
+  // unclassified until both surrounding positions have been evaluated.
+  const exploreClassifications = useMemo<(MoveQuality | null)[]>(() => {
+    if (!explore) return []
+    return explore.sans.map((san, i) => {
+      const beforeEval = explore.evals[i]
+      const afterEval = explore.evals[i + 1]
+      if (!beforeEval || !afterEval) return null
+      const mover = (explore.fens[i].split(' ')[1] ?? 'w') as 'w' | 'b'
+      const before: AnalyzedPly = { fen: explore.fens[i], san: '', moveNumber: 0, color: 'w', eval: beforeEval }
+      const after: AnalyzedPly = { fen: explore.fens[i + 1], san, moveNumber: 1, color: mover, eval: afterEval }
+      return classifyGame([before, after]).moves[1]?.quality ?? null
+    })
+  }, [explore])
+
   // ── Mainline navigation ───────────────────────────────────────────
   const goTo = useCallback(
     (i: number) => setCurrentPly(Math.max(0, Math.min(i, plies.length - 1))),
@@ -336,7 +355,10 @@ export function GameViewer({ game, onBack }: Props) {
   }, [])
 
   // ── Explore engine eval ────────────────────────────────────────────
-  const evaluateExplorePosition = useCallback(async (fen: string) => {
+  // Evaluates `fen` (the position at `offset` in the variation) and records the
+  // result both as the live eval and into explore.evals[offset] so each played
+  // move keeps its own evaluation.
+  const evaluateExplorePosition = useCallback(async (fen: string, offset: number) => {
     exploreSignalRef.current.cancelled = true
     const signal = { cancelled: false }
     exploreSignalRef.current = signal
@@ -347,7 +369,16 @@ export function GameViewer({ game, onBack }: Props) {
     try {
       await engine.ready
       const result = await engine.evaluate(fen, EXPLORE_DEPTH)
-      if (!signal.cancelled) { setExploreEval(result); setExploreEvalLoading(false) }
+      if (signal.cancelled) return
+      setExploreEval(result)
+      setExploreEvalLoading(false)
+      setExplore(prev => {
+        // Guard against the variation having changed under us.
+        if (!prev || prev.fens[offset] !== fen || prev.evals[offset] === result) return prev
+        const evals = prev.evals.slice()
+        evals[offset] = result
+        return { ...prev, evals }
+      })
     } catch {
       if (!signal.cancelled) setExploreEvalLoading(false)
     }
@@ -358,11 +389,11 @@ export function GameViewer({ game, onBack }: Props) {
     if (isInExplore) return
     setPvPreview(null)
     const baseFen = plies[currentPly].fen
-    setExplore({ basePly: currentPly, moves: [], fens: [baseFen], sans: [], offset: 0 })
+    setExplore({ basePly: currentPly, moves: [], fens: [baseFen], sans: [], evals: [null], offset: 0 })
     setExploreEval(null)
     const engine = new Engine()
     exploreEngineRef.current = engine
-    void evaluateExplorePosition(baseFen)
+    void evaluateExplorePosition(baseFen, 0)
   }, [isInExplore, currentPly, plies, evaluateExplorePosition])
 
   const exitExplore = useCallback(() => {
@@ -380,7 +411,7 @@ export function GameViewer({ game, onBack }: Props) {
       if (!prev) return prev
       const clamped = Math.max(0, Math.min(offset, prev.moves.length))
       if (clamped === prev.offset) return prev
-      void evaluateExplorePosition(prev.fens[clamped])
+      void evaluateExplorePosition(prev.fens[clamped], clamped)
       return { ...prev, offset: clamped }
     })
   }, [evaluateExplorePosition])
@@ -391,17 +422,18 @@ export function GameViewer({ game, onBack }: Props) {
       const newMoves = prev.moves.slice(0, -1)
       const newFens = prev.fens.slice(0, -1)
       const newSans = prev.sans.slice(0, -1)
+      const newEvals = prev.evals.slice(0, -1)
       const newOffset = Math.min(prev.offset, newMoves.length)
-      void evaluateExplorePosition(newFens[newOffset])
-      return { ...prev, moves: newMoves, fens: newFens, sans: newSans, offset: newOffset }
+      void evaluateExplorePosition(newFens[newOffset], newOffset)
+      return { ...prev, moves: newMoves, fens: newFens, sans: newSans, evals: newEvals, offset: newOffset }
     })
   }, [evaluateExplorePosition])
 
   const exploreClear = useCallback(() => {
     setExplore(prev => {
       if (!prev) return prev
-      void evaluateExplorePosition(prev.fens[0])
-      return { ...prev, moves: [], fens: [prev.fens[0]], sans: [], offset: 0 }
+      void evaluateExplorePosition(prev.fens[0], 0)
+      return { ...prev, moves: [], fens: [prev.fens[0]], sans: [], evals: [prev.evals[0] ?? null], offset: 0 }
     })
   }, [evaluateExplorePosition])
 
@@ -433,8 +465,9 @@ export function GameViewer({ game, onBack }: Props) {
       const newMoves = [...explore.moves.slice(0, explore.offset), uci]
       const newFens = [...explore.fens.slice(0, explore.offset + 1), chess.fen()]
       const newSans = [...explore.sans.slice(0, explore.offset), move.san]
-      setExplore({ ...explore, moves: newMoves, fens: newFens, sans: newSans, offset: explore.offset + 1 })
-      void evaluateExplorePosition(chess.fen())
+      const newEvals = [...explore.evals.slice(0, explore.offset + 1), null]
+      setExplore({ ...explore, moves: newMoves, fens: newFens, sans: newSans, evals: newEvals, offset: explore.offset + 1 })
+      void evaluateExplorePosition(chess.fen(), explore.offset + 1)
       return true
     },
     [explore, evaluateExplorePosition],
@@ -454,9 +487,10 @@ export function GameViewer({ game, onBack }: Props) {
       const newMoves = [...explore.moves.slice(0, explore.offset), uci]
       const newFens = [...explore.fens.slice(0, explore.offset + 1), chess.fen()]
       const newSans = [...explore.sans.slice(0, explore.offset), move.san]
-      setExplore({ ...explore, moves: newMoves, fens: newFens, sans: newSans, offset: explore.offset + 1 })
+      const newEvals = [...explore.evals.slice(0, explore.offset + 1), null]
+      setExplore({ ...explore, moves: newMoves, fens: newFens, sans: newSans, evals: newEvals, offset: explore.offset + 1 })
       setPendingPromotion(null)
-      void evaluateExplorePosition(chess.fen())
+      void evaluateExplorePosition(chess.fen(), explore.offset + 1)
     },
     [pendingPromotion, explore, evaluateExplorePosition],
   )
@@ -700,15 +734,21 @@ export function GameViewer({ game, onBack }: Props) {
                   <div className="explore-variation-panel">
                     {explore.sans.length === 0
                       ? <span className="explore-empty">Drag pieces to explore…</span>
-                      : explore.sans.map((san, i) => (
-                        <button
-                          key={i}
-                          className={`explore-move-chip${explore.offset === i + 1 ? ' active' : ''}`}
-                          onClick={() => exploreGoTo(i + 1)}
-                        >
-                          {san}
-                        </button>
-                      ))
+                      : explore.sans.map((san, i) => {
+                        const moveEval = explore.evals[i + 1]
+                        const quality = exploreClassifications[i]
+                        return (
+                          <button
+                            key={i}
+                            className={`explore-move-chip${explore.offset === i + 1 ? ' active' : ''}`}
+                            onClick={() => exploreGoTo(i + 1)}
+                          >
+                            <span className="explore-chip-san">{san}</span>
+                            {quality && <MoveQualityBadge quality={quality} compact />}
+                            {moveEval && <span className="explore-chip-eval">{fmtEval(moveEval)}</span>}
+                          </button>
+                        )
+                      })
                     }
                   </div>
                 </>

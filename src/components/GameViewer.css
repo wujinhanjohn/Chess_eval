@@ -415,8 +415,30 @@
 }
 .mode-exit-btn:hover { background: rgba(99, 102, 241, 0.12); }
 
-.mode-exit-btn--explore { color: #065f46; }
-.mode-exit-btn--explore:hover { background: rgba(16, 185, 129, 0.15); }
+.mode-exit-btn--explore {
+  color: #047857;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.mode-exit-btn--explore:hover {
+  background: rgba(16, 185, 129, 0.26);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  .mode-bar--explore {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #6ee7b7;
+  }
+  .mode-exit-btn--explore {
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.45);
+  }
+  .mode-exit-btn--explore:hover { background: rgba(16, 185, 129, 0.32); }
+}
 
 /* ── Secondary toolbar ────────────────────────────────── */
 
@@ -586,6 +608,9 @@
 }
 
 .explore-move-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -603,6 +628,18 @@
   color: #fff;
   font-weight: 600;
 }
+
+.explore-chip-san {
+  font-weight: 600;
+}
+
+.explore-chip-eval {
+  font-size: 10.5px;
+  font-weight: 400;
+  opacity: 0.7;
+  letter-spacing: 0;
+}
+.explore-move-chip.active .explore-chip-eval { opacity: 0.95; }
 
 .explore-empty {
   font-size: 12px;
