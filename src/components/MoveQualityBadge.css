@@ -1,17 +1,21 @@
 .mq-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-family: var(--sans);
+  gap: var(--space-1);
+  font-family: var(--font-sans);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   line-height: 1;
   letter-spacing: 0.02em;
   padding: 2px 6px 2px 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid transparent;
   flex-shrink: 0;
   white-space: nowrap;
+  /* Per-badge color, set by the .mq-<quality> modifiers below */
+  color: var(--mq-color, var(--text));
+  background: color-mix(in srgb, var(--mq-color, var(--text)) 16%, transparent);
+  border-color: color-mix(in srgb, var(--mq-color, var(--text)) 32%, transparent);
 }
 
 .mq-badge.mq-compact {
@@ -27,7 +31,9 @@
   height: 14px;
   border-radius: 50%;
   font-size: 9px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
+  background: var(--mq-color, var(--text));
+  color: var(--bg);
 }
 
 .mq-label {
@@ -35,84 +41,45 @@
   font-size: 9px;
 }
 
-/* Own palette — not Chess.com assets */
-
+/* Map each quality to its classification token */
 .mq-brilliant {
-  color: #0e7490;
-  background: rgba(6, 182, 212, 0.12);
-  border-color: rgba(6, 182, 212, 0.32);
+  --mq-color: var(--cls-brilliant);
 }
-.mq-brilliant .mq-dot { background: #06b6d4; color: #fff; }
-
 .mq-great {
-  color: #5b21b6;
-  background: rgba(124, 58, 237, 0.11);
-  border-color: rgba(124, 58, 237, 0.28);
+  --mq-color: var(--cls-great);
 }
-.mq-great .mq-dot { background: #7c3aed; color: #fff; }
-
 .mq-best {
-  color: #166534;
-  background: rgba(22, 101, 52, 0.12);
-  border-color: rgba(22, 101, 52, 0.25);
+  --mq-color: var(--cls-best);
 }
-.mq-best .mq-dot { background: #22c55e; color: #fff; }
-
 .mq-excellent {
-  color: #3f6212;
-  background: rgba(101, 163, 13, 0.12);
-  border-color: rgba(101, 163, 13, 0.25);
+  --mq-color: var(--cls-excellent);
 }
-.mq-excellent .mq-dot { background: #84cc16; color: #1a2e05; }
-
 .mq-good {
-  color: #115e59;
-  background: rgba(20, 184, 166, 0.12);
-  border-color: rgba(20, 184, 166, 0.25);
+  --mq-color: var(--cls-good);
 }
-.mq-good .mq-dot { background: #2dd4bf; color: #042f2e; }
-
 .mq-book {
-  color: #78350f;
-  background: rgba(180, 83, 9, 0.1);
-  border-color: rgba(180, 83, 9, 0.22);
+  --mq-color: var(--cls-book);
 }
-.mq-book .mq-dot { background: #d97706; color: #fff; }
-
 .mq-inaccuracy {
-  color: #854d0e;
-  background: rgba(234, 179, 8, 0.12);
-  border-color: rgba(234, 179, 8, 0.28);
+  --mq-color: var(--cls-inaccuracy);
 }
-.mq-inaccuracy .mq-dot { background: #eab308; color: #422006; }
-
 .mq-mistake {
-  color: #9a3412;
-  background: rgba(249, 115, 22, 0.12);
-  border-color: rgba(249, 115, 22, 0.28);
+  --mq-color: var(--cls-mistake);
 }
-.mq-mistake .mq-dot { background: #f97316; color: #fff; }
-
 .mq-miss {
-  color: #9f1239;
-  background: rgba(244, 63, 94, 0.12);
-  border-color: rgba(244, 63, 94, 0.28);
+  --mq-color: var(--cls-miss);
 }
-.mq-miss .mq-dot { background: #fb7185; color: #fff; }
-
 .mq-blunder {
-  color: #991b1b;
-  background: rgba(220, 38, 38, 0.12);
-  border-color: rgba(220, 38, 38, 0.28);
+  --mq-color: var(--cls-blunder);
 }
-.mq-blunder .mq-dot { background: #ef4444; color: #fff; }
 
+/* On an active (accent-filled) move row, lift the badge to read on the fill */
 .move-btn.active .mq-badge {
-  color: #fff;
+  color: var(--text-h);
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.35);
 }
 .move-btn.active .mq-dot {
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--accent);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--accent-active);
 }

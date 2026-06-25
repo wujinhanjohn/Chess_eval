@@ -7,16 +7,31 @@ import { analyzeGame } from '../analysis/analyzeGame'
 import { refineAnalysis } from '../analysis/refineAnalysis'
 import { classifyGame } from '../analysis/classifyGame'
 import { loadAnalysis, saveAnalysis } from '../analysis/analysisCache'
+import { computePlayerStats } from '../analysis/playerStats'
+import type { GameStats, PlayerStats } from '../analysis/playerStats'
+import { divideGame } from '../analysis/phaseDivider'
+import { computePhaseStats, presentQualities } from '../analysis/phaseStats'
+import type { GamePhaseStats, PlayerPhaseStats } from '../analysis/phaseStats'
+import type { Phase } from '../analysis/phaseDivider'
+import { countMoveQualities } from '../analysis/moveCounts'
+import type { MoveCounts } from '../analysis/moveCounts'
+import { MOVE_QUALITY_LABELS } from '../analysis/moveQuality'
 import type { ClassifiedMove, GameClassification } from '../analysis/classifyGame'
 import { MoveQuality } from '../analysis/moveQuality'
 import { EvalBar } from './EvalBar'
 import { EvalGraph } from './EvalGraph'
 import { MoveQualityBadge } from './MoveQualityBadge'
+import { ACCENT } from '../theme/colors'
 import type { Game, Ply, AnalyzedPly, EvalResult, MultiPVResult } from '../types'
 import './GameViewer.css'
 
 const ANALYSIS_DEPTH = 16
 const EXPLORE_DEPTH = 14   // lower for responsiveness in interactive mode
+// Brilliant/Great detection only needs the gap between the top two moves, which
+// is reliable a few plies shallower — and the refine pass is the slow one, so a
+// lower depth here noticeably speeds up analysis. Bump toward ANALYSIS_DEPTH for
+// max fidelity.
+const REFINE_DEPTH = 12
 
 // Arrow shape for react-chessboard v5
 type RCBArrow = { startSquare: string; endSquare: string; color: string }
@@ -144,6 +159,134 @@ interface ExploreState {
   offset: number    // current position in variation
 }
 
+// ── PlayerStatRow ────────────────────────────────────────────────────────────
+
+/** Accuracy % + estimated Elo for one player, shown under their name. */
+function PlayerStatRow({ stats }: { stats: PlayerStats }) {
+  if (stats.moveCount === 0) {
+    return <span className="gv-stat gv-stat--empty">—</span>
+  }
+  return (
+    <span className="gv-stat">
+      <span className="gv-stat-acc">
+        <strong>{stats.accuracy.toFixed(1)}%</strong> accuracy
+      </span>
+      <span
+        className="gv-stat-elo"
+        title="Rough estimate from average centipawn loss and accuracy — not an official rating"
+      >
+        ~{stats.estimatedElo} est. Elo
+      </span>
+    </span>
+  )
+}
+
+// ── PhaseTable ───────────────────────────────────────────────────────────────
+
+const PHASE_ROWS: { key: Phase; label: string }[] = [
+  { key: 'opening', label: 'Opening' },
+  { key: 'middlegame', label: 'Middlegame' },
+  { key: 'endgame', label: 'Endgame' },
+]
+
+/** Per-phase accuracy + classification counts for one player. */
+function PhaseTable({
+  title,
+  stats,
+  qualities,
+}: {
+  title: string
+  stats: PlayerPhaseStats
+  qualities: MoveQuality[]
+}) {
+  return (
+    <div className="phase-table-wrap">
+      <h4 className="phase-table-title">{title}</h4>
+      <table className="phase-table">
+        <thead>
+          <tr>
+            <th className="pt-phase">Phase</th>
+            <th className="pt-num">Acc</th>
+            <th className="pt-num" title="Moves graded for accuracy (excludes book &amp; forced)">
+              Moves
+            </th>
+            {qualities.map((q) => (
+              <th key={q} className="pt-num">
+                <MoveQualityBadge quality={q} compact />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {PHASE_ROWS.map(({ key, label }) => {
+            const p = stats[key]
+            const empty = p.totalMoves === 0
+            return (
+              <tr key={key} className={empty ? 'pt-row--empty' : ''}>
+                <td className="pt-phase">{label}</td>
+                <td className="pt-num">{p.accuracy !== null ? `${p.accuracy.toFixed(1)}%` : '—'}</td>
+                <td className="pt-num">{empty ? '—' : p.gradedMoveCount}</td>
+                {qualities.map((q) => (
+                  <td key={q} className={`pt-num${p.counts[q] === 0 ? ' pt-zero' : ''}`}>
+                    {empty ? '—' : p.counts[q]}
+                  </td>
+                ))}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── MoveSummary ──────────────────────────────────────────────────────────────
+
+const QUALITY_ORDER = Object.values(MoveQuality) as MoveQuality[]
+
+/** Whole-game tally of each classification, per player (Game-Review style). */
+function MoveSummary({
+  counts,
+  whiteName,
+  blackName,
+}: {
+  counts: MoveCounts
+  whiteName: string
+  blackName: string
+}) {
+  return (
+    <div className="move-summary">
+      <h3 className="move-summary-title">Move summary</h3>
+      <table className="move-summary-table">
+        <thead>
+          <tr>
+            <th className="ms-count">{whiteName}</th>
+            <th className="ms-cat" />
+            <th className="ms-count">{blackName}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {QUALITY_ORDER.map((q) => (
+            <tr key={q}>
+              <td className="ms-count" style={{ color: `var(--cls-${q})` }}>{counts.white[q]}</td>
+              <td className="ms-cat">
+                <span className="ms-dot" style={{ background: `var(--cls-${q})` }} />
+                {MOVE_QUALITY_LABELS[q]}
+              </td>
+              <td className="ms-count" style={{ color: `var(--cls-${q})` }}>{counts.black[q]}</td>
+            </tr>
+          ))}
+          <tr className="ms-total">
+            <td className="ms-count">{counts.whiteMoves}</td>
+            <td className="ms-cat">Total moves</td>
+            <td className="ms-count">{counts.blackMoves}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ── MoveList ───────────────────────────────────────────────────────────────
 
 interface MoveListProps {
@@ -256,6 +399,50 @@ export function GameViewer({ game, onBack }: Props) {
   const classifications = gameClassification?.moves
   const opening = gameClassification?.opening
 
+  // ── Player stats (accuracy / ACPL / estimated Elo) ────────────────
+  // Exclude leading book plies (reuse the classifier's Book labels); forced
+  // moves are detected inside computePlayerStats. Shown only once analysis is
+  // complete so the numbers don't churn mid-scan.
+  const bookPlies = useMemo(() => {
+    const s = new Set<number>()
+    classifications?.forEach((c) => {
+      if (c.quality === MoveQuality.Book && c.plyIndex > 0) s.add(c.plyIndex)
+    })
+    return s
+  }, [classifications])
+
+  const playerStats = useMemo<GameStats | undefined>(
+    () => (evals && evals.length > 1 ? computePlayerStats(evals, { bookPlies }) : undefined),
+    [evals, bookPlies],
+  )
+
+  // ── Phase breakdown (opening / middlegame / endgame) ──────────────
+  // Divider runs on positions, independent of analysis; the per-phase
+  // aggregation reuses the displayed classifications so counts agree exactly.
+  const division = useMemo(() => divideGame(plies), [plies])
+
+  const phaseStats = useMemo<GamePhaseStats | undefined>(
+    () =>
+      evals && classifications && evals.length > 1
+        ? computePhaseStats(evals, classifications, division)
+        : undefined,
+    [evals, classifications, division],
+  )
+
+  const phaseQualities = useMemo<MoveQuality[]>(
+    () => (phaseStats ? presentQualities(phaseStats) : []),
+    [phaseStats],
+  )
+
+  // Whole-game per-player tally of each classification (shown when done).
+  const moveCounts = useMemo<MoveCounts | undefined>(
+    () =>
+      classifications && classifications.length > 1
+        ? countMoveQualities(plies, classifications)
+        : undefined,
+    [plies, classifications],
+  )
+
   // ── Display values ────────────────────────────────────────────────
   const displayFen = isInExplore
     ? explore.fens[explore.offset]
@@ -275,7 +462,7 @@ export function GameViewer({ game, onBack }: Props) {
     if (isInPvPreview && pvPreview) {
       if (pvPreview.offset < pvPreview.pvMoves.length) {
         const uci = pvPreview.pvMoves[pvPreview.offset]
-        return [{ startSquare: uci.slice(0, 2), endSquare: uci.slice(2, 4), color: '#3b82f6' }]
+        return [{ startSquare: uci.slice(0, 2), endSquare: uci.slice(2, 4), color: ACCENT }]
       }
       return []
     }
@@ -299,10 +486,12 @@ export function GameViewer({ game, onBack }: Props) {
   }, [evals, currentPly, plies, classifications, isInPvPreview, isInExplore])
 
   // ── Explore turn ──────────────────────────────────────────────────
-  const exploreTurn = useMemo((): 'w' | 'b' => {
-    if (!explore) return 'w'
-    return (explore.fens[explore.offset].split(' ')[1] ?? 'w') as 'w' | 'b'
-  }, [explore])
+  // Side to move in the currently displayed position (mainline or explore).
+  // Used to gate which pieces can be dragged and to color the promotion picker.
+  const boardTurn = useMemo(
+    (): 'w' | 'b' => (displayFen.split(' ')[1] ?? 'w') as 'w' | 'b',
+    [displayFen],
+  )
 
   // ── Explore move classifications ──────────────────────────────────
   // Grade each played variation move (Best, Excellent, … Blunder, Miss) by
@@ -385,16 +574,28 @@ export function GameViewer({ game, onBack }: Props) {
   }, [])
 
   // ── Explore mode ──────────────────────────────────────────────────
-  const enterExplore = useCallback(() => {
-    if (isInExplore) return
-    setPvPreview(null)
-    const baseFen = plies[currentPly].fen
-    setExplore({ basePly: currentPly, moves: [], fens: [baseFen], sans: [], evals: [null], offset: 0 })
-    setExploreEval(null)
-    const engine = new Engine()
-    exploreEngineRef.current = engine
-    void evaluateExplorePosition(baseFen, 0)
-  }, [isInExplore, currentPly, plies, evaluateExplorePosition])
+  // Exploration starts implicitly the moment a piece is moved on the board
+  // (see handlePieceDrop). This kicks it off from `basePly` with the first move
+  // already applied, spinning up the explore engine on demand and seeding the
+  // base position's eval from the mainline analysis when available.
+  const startExploreFrom = useCallback(
+    (basePly: number, baseFen: string, afterFen: string, san: string, uci: string) => {
+      setPvPreview(null)
+      if (!exploreEngineRef.current) exploreEngineRef.current = new Engine()
+      const baseEval = evals?.[basePly]?.eval ?? null
+      setExplore({
+        basePly,
+        moves: [uci],
+        fens: [baseFen, afterFen],
+        sans: [san],
+        evals: [baseEval, null],
+        offset: 1,
+      })
+      setExploreEval(null)
+      void evaluateExplorePosition(afterFen, 1)
+    },
+    [evals, evaluateExplorePosition],
+  )
 
   const exitExplore = useCallback(() => {
     exploreSignalRef.current.cancelled = true
@@ -438,11 +639,13 @@ export function GameViewer({ game, onBack }: Props) {
   }, [evaluateExplorePosition])
 
   // ── Piece drop ────────────────────────────────────────────────────
+  // Works from the mainline too: moving a piece while not yet exploring starts
+  // a fresh exploration branched from the current ply (no Explore button).
   const handlePieceDrop = useCallback(
     ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }): boolean => {
-      if (!explore || !targetSquare) return false
-      const fen = explore.fens[explore.offset]
-      const chess = new Chess(fen)
+      if (!targetSquare || isInPvPreview) return false
+      const baseFen = explore ? explore.fens[explore.offset] : plies[currentPly].fen
+      const chess = new Chess(baseFen)
 
       const piece = chess.get(sourceSquare as Parameters<typeof chess.get>[0])
       const isPromotion =
@@ -462,37 +665,45 @@ export function GameViewer({ game, onBack }: Props) {
       if (!move) return false
 
       const uci = move.from + move.to
-      const newMoves = [...explore.moves.slice(0, explore.offset), uci]
-      const newFens = [...explore.fens.slice(0, explore.offset + 1), chess.fen()]
-      const newSans = [...explore.sans.slice(0, explore.offset), move.san]
-      const newEvals = [...explore.evals.slice(0, explore.offset + 1), null]
-      setExplore({ ...explore, moves: newMoves, fens: newFens, sans: newSans, evals: newEvals, offset: explore.offset + 1 })
-      void evaluateExplorePosition(chess.fen(), explore.offset + 1)
+      if (explore) {
+        const newMoves = [...explore.moves.slice(0, explore.offset), uci]
+        const newFens = [...explore.fens.slice(0, explore.offset + 1), chess.fen()]
+        const newSans = [...explore.sans.slice(0, explore.offset), move.san]
+        const newEvals = [...explore.evals.slice(0, explore.offset + 1), null]
+        setExplore({ ...explore, moves: newMoves, fens: newFens, sans: newSans, evals: newEvals, offset: explore.offset + 1 })
+        void evaluateExplorePosition(chess.fen(), explore.offset + 1)
+      } else {
+        startExploreFrom(currentPly, baseFen, chess.fen(), move.san, uci)
+      }
       return true
     },
-    [explore, evaluateExplorePosition],
+    [explore, isInPvPreview, plies, currentPly, evaluateExplorePosition, startExploreFrom],
   )
 
   const handlePromotion = useCallback(
     (piece: 'q' | 'r' | 'b' | 'n') => {
-      if (!pendingPromotion || !explore) return
-      const fen = explore.fens[explore.offset]
-      const chess = new Chess(fen)
+      if (!pendingPromotion) return
+      const baseFen = explore ? explore.fens[explore.offset] : plies[currentPly].fen
+      const chess = new Chess(baseFen)
       let move: ReturnType<typeof chess.move>
       try {
         move = chess.move({ from: pendingPromotion.from, to: pendingPromotion.to, promotion: piece })
       } catch { setPendingPromotion(null); return }
       if (!move) { setPendingPromotion(null); return }
       const uci = move.from + move.to + piece
-      const newMoves = [...explore.moves.slice(0, explore.offset), uci]
-      const newFens = [...explore.fens.slice(0, explore.offset + 1), chess.fen()]
-      const newSans = [...explore.sans.slice(0, explore.offset), move.san]
-      const newEvals = [...explore.evals.slice(0, explore.offset + 1), null]
-      setExplore({ ...explore, moves: newMoves, fens: newFens, sans: newSans, evals: newEvals, offset: explore.offset + 1 })
+      if (explore) {
+        const newMoves = [...explore.moves.slice(0, explore.offset), uci]
+        const newFens = [...explore.fens.slice(0, explore.offset + 1), chess.fen()]
+        const newSans = [...explore.sans.slice(0, explore.offset), move.san]
+        const newEvals = [...explore.evals.slice(0, explore.offset + 1), null]
+        setExplore({ ...explore, moves: newMoves, fens: newFens, sans: newSans, evals: newEvals, offset: explore.offset + 1 })
+        void evaluateExplorePosition(chess.fen(), explore.offset + 1)
+      } else {
+        startExploreFrom(currentPly, baseFen, chess.fen(), move.san, uci)
+      }
       setPendingPromotion(null)
-      void evaluateExplorePosition(chess.fen(), explore.offset + 1)
     },
-    [pendingPromotion, explore, evaluateExplorePosition],
+    [pendingPromotion, explore, plies, currentPly, evaluateExplorePosition, startExploreFrom],
   )
 
   // ── Keyboard navigation ────────────────────────────────────────────
@@ -574,7 +785,7 @@ export function GameViewer({ game, onBack }: Props) {
       if (candidateCount > 0 && !signal.cancelled) {
         setAnalysis({ phase: 'refining', results, done: 0, total: candidateCount })
         const multiPV = await refineAnalysis(
-          results, baseClass.moves, ANALYSIS_DEPTH, engine, signal,
+          results, baseClass.moves, REFINE_DEPTH, engine, signal,
           (done, total) => {
             if (signal.cancelled) return
             setAnalysis(prev => prev.phase === 'refining' ? { ...prev, done, total } : prev)
@@ -622,13 +833,23 @@ export function GameViewer({ game, onBack }: Props) {
 
       <div className="gv-header">
         <div className="gv-players">
-          <span className="gv-player">
-            {game.white.username}<span className="gv-rating"> ({game.white.rating})</span>
-          </span>
+          <div className="gv-player">
+            <span className="gv-player-name">
+              {game.white.username}<span className="gv-rating"> ({game.white.rating})</span>
+            </span>
+            {analysis.phase === 'done' && playerStats && (
+              <PlayerStatRow stats={playerStats.white} />
+            )}
+          </div>
           <span className="gv-result">{resultText}</span>
-          <span className="gv-player">
-            {game.black.username}<span className="gv-rating"> ({game.black.rating})</span>
-          </span>
+          <div className="gv-player">
+            <span className="gv-player-name">
+              {game.black.username}<span className="gv-rating"> ({game.black.rating})</span>
+            </span>
+            {analysis.phase === 'done' && playerStats && (
+              <PlayerStatRow stats={playerStats.black} />
+            )}
+          </div>
         </div>
         <p className="gv-meta">
           {game.timeClass}{game.eco ? ` · ${game.eco}` : ''}{` · Playing as ${isMyWhite ? 'white' : 'black'}`}
@@ -649,12 +870,12 @@ export function GameViewer({ game, onBack }: Props) {
                   options={{
                     position: displayFen,
                     boardOrientation: orientation,
-                    allowDragging: isInExplore,
+                    allowDragging: !isInPvPreview,
                     arrows,
-                    canDragPiece: isInExplore
-                      ? ({ piece }) => piece.pieceType[0] === exploreTurn
-                      : undefined,
-                    onPieceDrop: isInExplore ? handlePieceDrop : undefined,
+                    canDragPiece: isInPvPreview
+                      ? undefined
+                      : ({ piece }) => piece.pieceType[0] === boardTurn,
+                    onPieceDrop: isInPvPreview ? undefined : handlePieceDrop,
                   }}
                 />
                 {pendingPromotion && (
@@ -663,7 +884,7 @@ export function GameViewer({ game, onBack }: Props) {
                     <div className="promotion-pieces">
                       {(['q', 'r', 'b', 'n'] as const).map(p => (
                         <button key={p} className="promo-btn" onClick={() => handlePromotion(p)}>
-                          {PROMO[p][exploreTurn]}
+                          {PROMO[p][boardTurn]}
                         </button>
                       ))}
                     </div>
@@ -789,9 +1010,7 @@ export function GameViewer({ game, onBack }: Props) {
                   ↗ Best arrow
                 </button>
                 {!isInPvPreview && !isInExplore && (
-                  <button className="gv-tool-btn" onClick={enterExplore} title="Enter interactive exploration mode">
-                    ⊕ Explore
-                  </button>
+                  <span className="gv-tool-hint">⊕ Move a piece to explore variations</span>
                 )}
                 {isInExplore && explore.moves.length > 0 && (
                   <button className="gv-tool-btn" onClick={exploreClear}>
@@ -799,6 +1018,24 @@ export function GameViewer({ game, onBack }: Props) {
                   </button>
                 )}
               </div>
+
+              {/* ── Move explanation ── */}
+              {!isInPvPreview && !isInExplore &&
+                currentClassification?.explanation && currentClassification.quality && (
+                <div
+                  className="move-explanation"
+                  style={{ borderColor: `var(--cls-${currentClassification.quality})` }}
+                >
+                  <MoveQualityBadge
+                    quality={currentClassification.quality}
+                    compact
+                    debug={currentClassification.debug}
+                  />
+                  <span className="move-explanation-text">
+                    {currentClassification.explanation.sentence}
+                  </span>
+                </div>
+              )}
 
               {/* ── Best line panel ── */}
               {!isInPvPreview && !isInExplore && bestLineData && (
@@ -877,6 +1114,30 @@ export function GameViewer({ game, onBack }: Props) {
           disabled={isInPvPreview || isInExplore}
         />
       </div>
+
+      {/* ── Move summary ── */}
+      {analysis.phase === 'done' && moveCounts && (
+        <MoveSummary
+          counts={moveCounts}
+          whiteName={game.white.username}
+          blackName={game.black.username}
+        />
+      )}
+
+      {/* ── Phase breakdown ── */}
+      {analysis.phase === 'done' && phaseStats && (
+        <div className="phase-breakdown">
+          <h3 className="phase-breakdown-title">Phase breakdown</h3>
+          <p className="phase-breakdown-sub">
+            Phases split by material &amp; structure (not move number). Opening accuracy can be
+            sparse — book moves are ungraded.
+          </p>
+          <div className="phase-tables">
+            <PhaseTable title={game.white.username} stats={phaseStats.white} qualities={phaseQualities} />
+            <PhaseTable title={game.black.username} stats={phaseStats.black} qualities={phaseQualities} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

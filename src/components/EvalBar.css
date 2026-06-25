@@ -2,7 +2,7 @@
 
 .eval-bar-wrap {
   position: relative;
-  width: 20px;
+  width: 22px;
   height: 480px;
   flex-shrink: 0;
 }
@@ -14,7 +14,7 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--border);
   box-sizing: border-box;
@@ -26,12 +26,11 @@
   transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.eb-dark  { background: #1d1d1d; }
-.eb-light { background: #eeece8; }
-
-@media (prefers-color-scheme: dark) {
-  .eb-light { background: #cdc8be; }
-  .eb-dark  { background: #111; }
+.eb-dark {
+  background: var(--eval-dark);
+}
+.eb-light {
+  background: var(--eval-white);
 }
 
 /* ── Eval label ─────────────────────────────────────────── */
@@ -40,16 +39,14 @@
   position: absolute;
   /* Horizontally centred on the bar; vertical position set inline */
   left: 50%;
-  transform: translate(-50%, -50%);
-  /* Vertical text so it fits in the narrow bar */
-  writing-mode: vertical-lr;
-  font-size: 8.5px;
-  font-family: var(--mono);
-  font-weight: 700;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: var(--fw-bold);
   letter-spacing: 0.01em;
   white-space: nowrap;
   pointer-events: none;
   z-index: 2;
-  /* Rotate so text reads bottom-to-top ("+1.2" with + at bottom = white side) */
+  /* Vertical text so it fits the narrow bar; rotated to read bottom-to-top */
+  writing-mode: vertical-lr;
   transform: translate(-50%, -50%) rotate(180deg);
 }
