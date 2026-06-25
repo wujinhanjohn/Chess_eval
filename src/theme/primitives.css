@@ -1,0 +1,196 @@
+/*
+ * Shared primitives — token-driven, reusable across every screen.
+ * Buttons, panels/cards, and tables. (The eval bar and classification badges
+ * are restyled in their own component CSS using the same tokens.)
+ */
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--bg-raised);
+  color: var(--text-h);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition),
+    transform var(--transition);
+}
+
+.btn:hover {
+  background: var(--bg-hover);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-border);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Variants */
+.btn-primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+}
+.btn-primary:hover {
+  background: var(--btn-primary-bg-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-raised);
+  border-color: var(--border);
+  color: var(--text-h);
+}
+.btn-secondary:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+}
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-h);
+}
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+.btn-danger:hover {
+  border-color: color-mix(in srgb, var(--loss) 50%, transparent);
+  background: color-mix(in srgb, var(--loss) 12%, transparent);
+  color: var(--loss);
+}
+
+/* Sizes */
+.btn-sm {
+  font-size: var(--fs-xs);
+  padding: var(--space-1) var(--space-3);
+}
+.btn-lg {
+  font-size: var(--fs-md);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-lg);
+}
+.btn-block {
+  width: 100%;
+}
+.btn-pill {
+  border-radius: var(--radius-pill);
+}
+
+/* Icon-only square button */
+.btn-icon {
+  padding: var(--space-2);
+  width: 34px;
+  height: 34px;
+}
+
+/* ── Panels / cards ──────────────────────────────────────────────────── */
+
+.panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.panel-raised {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-pad {
+  padding: var(--space-4);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-h);
+  letter-spacing: 0.02em;
+}
+
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  transition:
+    border-color var(--transition),
+    background var(--transition),
+    transform var(--transition);
+}
+.card-hover:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-raised);
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────── */
+
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.ds-table th,
+.ds-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.ds-table thead th {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ds-table tbody tr:hover {
+  background: var(--bg-raised);
+}
+
+.ds-table .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text-h);
+}

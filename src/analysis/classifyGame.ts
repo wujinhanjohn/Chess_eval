@@ -6,6 +6,8 @@ import type { BrilliantGreatDebug } from './moveQuality'
 import { isBookPosition, getOpeningAt, toPositionKey } from './openingBook'
 import type { OpeningEntry } from './openingBook'
 import { isSacrifice } from './see'
+import { explainMove } from './explainMove'
+import type { MoveExplanation } from './explainMove'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,6 +18,7 @@ export interface ClassifiedMove {
   quality: MoveQuality | null  // null for ply 0 (no move)
   winLoss: number | null       // win-probability points given up; null for ply 0
   debug?: BrilliantGreatDebug  // present only for Brilliant / Great moves
+  explanation?: MoveExplanation // present only for explained (inaccuracy-or-worse) moves
 }
 
 export interface GameClassification {
@@ -204,7 +207,12 @@ export function classifyGame(
       }
     }
 
-    moves.push({ plyIndex: k, quality, winLoss, debug })
+    // ── Explanation (inaccuracy or worse; engine-grounded) ──────────────────
+    // Pure off the already-stored before/after evals — no re-search. Returns
+    // null for good/forced/already-decided moves, so it self-gates.
+    const explanation = explainMove(before, after, quality) ?? undefined
+
+    moves.push({ plyIndex: k, quality, winLoss, debug, explanation })
   }
 
   return { moves, opening }

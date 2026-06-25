@@ -3,6 +3,7 @@ import { CONFIG } from './config'
 import { getRecentGames } from './api/chesscom'
 import { getCachedUrls, clearAnalysisCache } from './analysis/analysisCache'
 import { GameViewer } from './components/GameViewer'
+import { StyleGuide } from './components/StyleGuide'
 import type { Game, ApiError } from './types'
 import './App.css'
 
@@ -117,6 +118,14 @@ export default function App() {
   const [view, setView] = useState<AppView>({ mode: 'list' })
   const [cachedUrls, setCachedUrls] = useState<Set<string>>(new Set())
 
+  // Design-system review page, opened at #style (no effect on real screens).
+  const [hash, setHash] = useState(() => window.location.hash)
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash)
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
@@ -149,6 +158,8 @@ export default function App() {
       cancelled = true
     }
   }, [view.mode])
+
+  if (hash === '#style') return <StyleGuide />
 
   // Game viewer — key ensures fresh state for every game selected
   if (view.mode === 'game') {
